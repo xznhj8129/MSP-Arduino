@@ -1,0 +1,1 @@
+cp -r /home/anon/Arduino/libraries/MSP-Arduino/* .
