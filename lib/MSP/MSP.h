@@ -38,26 +38,26 @@ struct msp_ack_t {
     // Use specific structs when detailed replies are expected.
 };
 
-// MSP_API_VERSION reply (Refined)
+// MSP_API_VERSION reply
 struct msp_api_version_t {
   uint8_t mspProtocolVersion;
   uint8_t apiVersionMajor;
   uint8_t apiVersionMinor;
 } __attribute__ ((packed));
 
-// MSP_FC_VARIANT reply (Refined)
+// MSP_FC_VARIANT reply
 struct msp_fc_variant_t {
   char fcVariantIdentifier[4];
 } __attribute__ ((packed));
 
-// MSP_FC_VERSION reply (Refined)
+// MSP_FC_VERSION reply
 struct msp_fc_version_t {
   uint8_t fcVersionMajor;
   uint8_t fcVersionMinor;
   uint8_t fcVersionPatch;
 } __attribute__ ((packed));
 
-// MSP_BOARD_INFO reply (Refined)
+// MSP_BOARD_INFO reply
 // Note: Variable length targetName needs special handling in receiver function if used
 struct msp_board_info_t {
   char     boardIdentifier[4];
@@ -69,7 +69,7 @@ struct msp_board_info_t {
 } __attribute__ ((packed));
 #define MSP_BOARD_INFO_FIXED_SIZE (4 + 2 + 1 + 1 + 1) // Size before variable name
 
-// MSP_BUILD_INFO reply (Refined)
+// MSP_BUILD_INFO reply
 struct msp_build_info_t {
   char buildDate[11];
   char buildTime[8];
@@ -104,7 +104,7 @@ struct msp_status_ex_t {
   uint8_t  accCalibAxisFlags;
 } __attribute__ ((packed));
 
-// MSP2_INAV_STATUS reply (Comprehensive status)
+// MSP2_INAV_STATUS reply
 typedef uint64_t boxBitmask_t; // Assuming 64 modes max for safety, check firmware if > 64 needed
 struct msp2_inav_status_t {
   uint16_t cycleTime;
@@ -117,25 +117,25 @@ struct msp2_inav_status_t {
   uint8_t  mixerProfile;
 } __attribute__ ((packed));
 
-// MSP_RAW_IMU reply (Refined)
+// MSP_RAW_IMU reply
 struct msp_raw_imu_t {
   int16_t accX, accY, accZ; // Scaled ~1/512 G
   int16_t gyroX, gyroY, gyroZ; // deg/s
   int16_t magX, magY, magZ; // Raw units
 } __attribute__ ((packed));
 
-// MSP_ATTITUDE reply (Refined)
+// MSP_ATTITUDE reply
 struct msp_attitude_t {
   int16_t roll;  // deci-degrees
   int16_t pitch; // deci-degrees
   int16_t yaw;   // degrees (converted in FC)
 } __attribute__ ((packed));
 
-// MSP_ALTITUDE reply (Refined)
+// MSP_ALTITUDE reply
 struct msp_altitude_t {
-  uint32_t estimatedAltitude; // cm
+  int32_t estimatedAltitude; // cm
   int16_t  variometer;        // cm/s
-  uint32_t baroAltitude;      // cm (raw baro)
+  //uint32_t baroAltitude;      // cm (raw baro), not used?
 } __attribute__ ((packed));
 
 // MSP_SONAR_ALTITUDE reply
@@ -148,26 +148,26 @@ struct msp2_inav_air_speed_t {
     uint32_t airspeed; // cm/s
 } __attribute__ ((packed));
 
-// MSP_RAW_GPS reply (Refined)
+// MSP_RAW_GPS reply
 struct msp_raw_gps_t {
   uint8_t  fixType;       // enum: 0=NoFix, 1=2D, 2=3D, etc.
   uint8_t  numSat;
-  uint32_t latitude;      // deg * 1e7
-  uint32_t longitude;     // deg * 1e7
+  int32_t latitude;      // deg * 1e7
+  int32_t longitude;     // deg * 1e7
   uint16_t altitude;      // meters (MSPv1 specific)
   uint16_t speed;         // cm/s
   uint16_t groundCourse;  // deci-degrees (0-3599)
   uint16_t hdop;          // HDOP * 100
 } __attribute__ ((packed));
 
-// MSP_COMP_GPS reply (Refined)
+// MSP_COMP_GPS reply
 struct msp_comp_gps_t {
   uint16_t distanceToHome;  // meters
   uint16_t directionToHome; // degrees (0-360)
   uint8_t  gpsHeartbeat;    // Toggles
 } __attribute__ ((packed));
 
-// MSP_NAV_STATUS reply (Refined)
+// MSP_NAV_STATUS reply
 struct msp_nav_status_t {
   uint8_t navMode;        // enum NAV_MODE_*
   uint8_t navState;       // enum NAV_STATE_*
@@ -177,7 +177,7 @@ struct msp_nav_status_t {
   uint16_t targetHeading; // degrees
 } __attribute__ ((packed));
 
-// MSP_WP_GETINFO reply (Refined)
+// MSP_WP_GETINFO reply
 struct msp_wp_getinfo_t {
   uint8_t wpCapabilities; // Reserved, usually 0
   uint8_t maxWaypoints;   // NAV_MAX_WAYPOINTS
@@ -185,7 +185,7 @@ struct msp_wp_getinfo_t {
   uint8_t waypointCount;  // Current count
 } __attribute__ ((packed));
 
-// MSP_WP / MSP_SET_WP structure (Refined)
+// MSP_WP / MSP_SET_WP structure
 struct msp_nav_waypoint_t {
   uint8_t  waypointIndex; // Index (0 to NAV_MAX_WAYPOINTS - 1)
   uint8_t  action;        // enum navWaypointAction_e
@@ -198,17 +198,17 @@ struct msp_nav_waypoint_t {
   uint8_t  flag;          // Bitmask NAV_WP_FLAG_* (e.g., altitude ref, last WP)
 } __attribute__ ((packed));
 
-// MSP_WP_MISSION_LOAD / MSP_WP_MISSION_SAVE command payload (Refined)
+// MSP_WP_MISSION_LOAD / MSP_WP_MISSION_SAVE command payload
 struct msp_mission_id_t {
   uint8_t missionID; // Currently ignored, set to 0
 } __attribute__ ((packed));
 
-// MSP_SET_HEAD command payload (Refined)
+// MSP_SET_HEAD command payload
 struct msp_set_head_t {
   uint16_t heading; // degrees (0-359)
 } __attribute__ ((packed));
 
-// MSP_NAV_POSHOLD / MSP_SET_NAV_POSHOLD structure (Refined)
+// MSP_NAV_POSHOLD / MSP_SET_NAV_POSHOLD structure
 struct msp_nav_poshold_config_t {
     uint8_t  userControlMode;    // enum
     uint16_t maxAutoSpeed;       // cm/s
@@ -220,7 +220,7 @@ struct msp_nav_poshold_config_t {
     uint16_t mcHoverThrottle;    // PWM
 } __attribute__ ((packed));
 
-// MSP_UID reply (Refined)
+// MSP_UID reply
 struct msp_uid_t {
   uint32_t uid0;
   uint32_t uid1;
@@ -233,7 +233,7 @@ struct msp_acc_trim_t {
     int16_t roll;  // Usually 0.1 deg units in older MWii
 } __attribute__ ((packed));
 
-// MSP_BATTERY_STATE reply (Refined)
+// MSP_BATTERY_STATE reply
 struct msp_battery_state_t {
   uint8_t  cellCount;
   uint16_t capacity;     // mAh
@@ -323,6 +323,18 @@ struct msp2_inav_logic_conditions_status_t {
 
 // Note: MSP2_INAV_GLOBAL_FUNCTIONS is not implemented in INAV source, skip for now
 
+struct msp_mode_range_t {
+    uint8_t modePermanentId; // Permanent ID of the flight mode (from MSP_BOXIDS)
+    uint8_t auxChannelIndex; // 0-based index of the AUX channel
+    uint8_t rangeStartStep;  // Start step (0-48), converts to 900-2100 PWM
+    uint8_t rangeEndStep;    // End step (0-48), converts to 900-2100 PWM
+} __attribute__ ((packed));
+
+#define MSP_MAX_MODE_RANGES 40 // A reasonable limit based on INAV capabilities
+struct msp_mode_ranges_t {
+    msp_mode_range_t ranges[MSP_MAX_MODE_RANGES];
+};
+
 class MSP {
   public:
     // --- Constructor & Basic Setup ---
@@ -378,6 +390,7 @@ class MSP {
     // Modes
     bool requestBoxIDs(msp_boxids_t *reply, uint16_t *count); // Get permanent IDs
     // getActiveModes is complex due to bitmask size, better handled in sketch using requestInavStatus
+    bool requestModeRanges(msp_mode_ranges_t *reply, uint16_t *count); // Get mode activation ranges
 
     // RC & Motors
     bool requestRcChannels(msp_rc_channels_t *reply, uint8_t expectedChannels); // Specify max channels expected

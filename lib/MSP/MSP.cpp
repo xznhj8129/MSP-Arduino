@@ -251,106 +251,6 @@ bool MSP::command(uint16_t messageID, const void *payload, uint16_t size, bool w
 
 // --- High Level Functions ---
 
-// Define message IDs if not provided by external includes
-#ifndef MSP_API_VERSION
-#define MSP_API_VERSION                 1
-#define MSP_FC_VARIANT                  2
-#define MSP_FC_VERSION                  3
-#define MSP_BOARD_INFO                  4
-#define MSP_BUILD_INFO                  5
-#define MSP_INAV_PID                    6 // Use MSP2_PID instead
-#define MSP_SET_INAV_PID                7 // Use MSP2_SET_PID instead
-#define MSP_NAME                        10
-#define MSP_SET_NAME                    11
-#define MSP_NAV_POSHOLD                 12
-#define MSP_SET_NAV_POSHOLD             13
-#define MSP_CALIBRATION_DATA            14
-#define MSP_SET_CALIBRATION_DATA        15
-#define MSP_WP_GETINFO                  20
-#define MSP_MODE_RANGES                 34
-#define MSP_SET_MODE_RANGE              35
-#define MSP_FEATURE                     36
-#define MSP_SET_FEATURE                 37
-#define MSP_BOARD_ALIGNMENT             38
-#define MSP_SET_BOARD_ALIGNMENT         39
-#define MSP_CURRENT_METER_CONFIG        40
-#define MSP_SET_CURRENT_METER_CONFIG    41
-#define MSP_MIXER                       42 // Use MSP2_INAV_MIXER
-#define MSP_SET_MIXER                   43 // Use MSP2_INAV_SET_MIXER
-#define MSP_RX_CONFIG                   44
-#define MSP_SET_RX_CONFIG               45
-#define MSP_RSSI_CONFIG                 50
-#define MSP_SET_RSSI_CONFIG             51
-#define MSP_CF_SERIAL_CONFIG            54 // Use MSP2_COMMON_SERIAL_CONFIG
-#define MSP_SET_CF_SERIAL_CONFIG        55 // Use MSP2_COMMON_SET_SERIAL_CONFIG
-#define MSP_VOLTAGE_METER_CONFIG        56 // Use MSP2_INAV_BATTERY_CONFIG
-#define MSP_SET_VOLTAGE_METER_CONFIG    57 // Use MSP2_INAV_SET_BATTERY_CONFIG
-#define MSP_SONAR_ALTITUDE              58
-#define MSP_RX_MAP                      64
-#define MSP_SET_RX_MAP                  65
-#define MSP_REBOOT                      68
-#define MSP_LOOP_TIME                   73
-#define MSP_SET_LOOP_TIME               74
-#define MSP_FAILSAFE_CONFIG             75
-#define MSP_SET_FAILSAFE_CONFIG         76
-#define MSP_SENSOR_CONFIG               96
-#define MSP_SET_SENSOR_CONFIG           97
-#define MSP_STATUS                      101
-#define MSP_RAW_IMU                     102
-#define MSP_SERVO                       103
-#define MSP_MOTOR                       104
-#define MSP_RC                          105
-#define MSP_RAW_GPS                     106
-#define MSP_COMP_GPS                    107
-#define MSP_ATTITUDE                    108
-#define MSP_ALTITUDE                    109
-#define MSP_ANALOG                      110 // Use MSP2_INAV_ANALOG
-#define MSP_RC_TUNING                   111 // Use MSP2_INAV_RATE_PROFILE
-#define MSP_PID                         112 // Use MSP2_PID
-#define MSP_BOXIDS                      119
-#define MSP_SERVO_CONFIGURATIONS        120 // Use MSP2_INAV_SERVO_CONFIG
-#define MSP_NAV_STATUS                  121
-#define MSP_SET_HEAD                    211
-#define MSP_ACC_CALIBRATION             205
-#define MSP_MAG_CALIBRATION             206
-#define MSP_RESET_CONF                  208
-#define MSP_SET_WP                      209
-#define MSP_SELECT_SETTING              210
-#define MSP_SET_SERVO_CONFIGURATION     212 // Use MSP2_INAV_SET_SERVO_CONFIG
-#define MSP_SET_MOTOR                   214
-#define MSP_EEPROM_WRITE                250
-#define MSP_ACC_TRIM                    240 // Not in INAV fc_msp.c
-#define MSP_SET_ACC_TRIM                239 // Not in INAV fc_msp.c
-#define MSP_STATUS_EX                   150
-#define MSP_SENSOR_STATUS               151
-#define MSP_UID                         160
-#define MSP_BATTERY_STATE               130
-#define MSP_WP_MISSION_LOAD             18
-#define MSP_WP_MISSION_SAVE             19
-#endif // MSP_API_VERSION
-
-#ifndef MSP2_COMMON_SETTING_INFO
-#define MSP2_COMMON_SETTING_INFO        0x1007
-#define MSP2_COMMON_SERIAL_CONFIG       0x1009
-#define MSP2_COMMON_SET_SERIAL_CONFIG   0x100A
-#define MSP2_INAV_STATUS                0x2000
-#define MSP2_INAV_ANALOG                0x2002
-#define MSP2_INAV_BATTERY_CONFIG        0x2005
-#define MSP2_INAV_SET_BATTERY_CONFIG    0x2006
-#define MSP2_INAV_RATE_PROFILE          0x2007
-#define MSP2_INAV_SET_RATE_PROFILE      0x2008
-#define MSP2_INAV_AIR_SPEED             0x2009
-#define MSP2_INAV_MIXER                 0x2010
-#define MSP2_INAV_SET_MIXER             0x2011
-#define MSP2_INAV_GVAR_STATUS           0x2027
-#define MSP2_INAV_LOGIC_CONDITIONS_STATUS 0x2026
-#define MSP2_PID                        0x2030
-#define MSP2_SET_PID                    0x2031
-#define MSP2_INAV_SERVO_CONFIG          0x2200
-#define MSP2_INAV_SET_SERVO_CONFIG      0x2201
-#endif // MSP2_COMMON_SETTING_INFO
-
-
 // --- Version & Board Info ---
 bool MSP::requestApiVersion(msp_api_version_t *reply) {
     return request(MSP_API_VERSION, reply, sizeof(*reply));
@@ -440,9 +340,6 @@ bool MSP::requestInavStatus(msp2_inav_status_t *reply) {
 }
 
 // Check ARMFLAG_ARMED bit (bit 2) from last cached status
-#ifndef ARMFLAG_ARMED
-#define ARMFLAG_ARMED 2
-#endif
 bool MSP::isArmed() {
     return (_last_status_arming_flags & (1UL << ARMFLAG_ARMED)) != 0;
 }
@@ -537,6 +434,21 @@ bool MSP::requestBoxIDs(msp_boxids_t *reply, uint16_t *count) {
      }
      *count = 0;
      return false;
+}
+
+bool MSP::requestModeRanges(msp_mode_ranges_t *reply, uint16_t *count) {
+    if (!reply || !count) return false;
+    uint16_t recvSize;
+
+    // The reply payload is a variable-length array of 4-byte structs.
+    if (request(MSP_MODE_RANGES, reply->ranges, sizeof(reply->ranges), &recvSize)) {
+        // Each mode range struct is 4 bytes. Calculate how many we received.
+        *count = recvSize / sizeof(msp_mode_range_t);
+        return true;
+    }
+
+    *count = 0;
+    return false;
 }
 
 

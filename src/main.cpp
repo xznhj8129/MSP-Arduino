@@ -60,12 +60,21 @@ void setup() {
         Serial.println("Failed to get FC Variant.");
     }
 
-     msp_fc_version_t fc_version;
+    msp_fc_version_t fc_version;
     if (msp.requestFcVersion(&fc_version)) {
         Serial.printf("FC Version: %d.%d.%d\n",
             fc_version.fcVersionMajor, fc_version.fcVersionMinor, fc_version.fcVersionPatch);
     } else {
         Serial.println("Failed to get FC Version.");
+    }
+
+    // Example: Board Info
+    msp_board_info_t boardInfo;
+    if (msp.requestBoardInfo(&boardInfo)) {
+         Serial.printf("boardIdentifier: %s\n", boardInfo.boardIdentifier);
+         Serial.printf("hardwareRevision: %d\n", boardInfo.hardwareRevision);
+    } else {
+         Serial.println("Failed to get Board Info.");
     }
 
     // Example: Get craft name
@@ -75,6 +84,48 @@ void setup() {
     } else {
          Serial.println("Failed to get Craft Name.");
     }
+
+    // Example: BoxIDs
+    msp_boxids_t boxIds;   // Holds the raw ID list
+    uint16_t      boxId_count;   // Number of IDs actually returned
+
+    if (msp.requestBoxIDs(&boxIds, &boxId_count)) {
+        Serial.printf("Received %u Box IDs:\n", boxId_count);
+
+        for (uint16_t i = 0; i < boxId_count; ++i) {
+            Serial.printf("  ID[%u] = %u\n", i, boxIds.ids[i]);
+        }
+    }
+        else {
+        Serial.println("Failed to get Box IDs.");
+    }
+
+    // Example: Mode Ranges
+    msp_mode_ranges_t modeRanges;
+    uint16_t          modeRangeCount;
+
+    if (msp.requestModeRanges(&modeRanges, &modeRangeCount)) {
+        Serial.printf("Received %u Mode Ranges:\n", modeRangeCount);
+
+        for (uint16_t i = 0; i < modeRangeCount; ++i) {
+            // Per documentation, modePermanentId = 0 means the slot is unused.
+            if (modeRanges.ranges[i].modePermanentId == 0) continue;
+
+            // Convert steps (0-48) to PWM values (900-2100). Formula: 900 + step * 25
+            uint16_t range_start = 900 + (modeRanges.ranges[i].rangeStartStep * 25);
+            uint16_t range_end   = 900 + (modeRanges.ranges[i].rangeEndStep * 25);
+
+            Serial.printf("  Range[%u]: ModeID=%u, Aux=%u, Range=[%u, %u]\n",
+                i,
+                modeRanges.ranges[i].modePermanentId,
+                modeRanges.ranges[i].auxChannelIndex + 1, // Print as 1-based (AUX1, AUX2...)
+                range_start,
+                range_end);
+        }
+    } else {
+        Serial.println("Failed to get Mode Ranges.");
+    }
+
 
     // Example: Get Waypoint Info
     msp_wp_getinfo_t wpInfo;
@@ -199,10 +250,10 @@ void loop() {
         Serial.println("Requesting Altitude...");
         msp_altitude_t altitude;
         if (msp.requestAltitude(&altitude)) {
-             Serial.printf("  EstAlt: %.2f m, Vario: %.2f m/s, BaroAlt: %.2f m\n",
+             Serial.printf("  Alt: %.2f m, Vario: %.2f m/s\n",
                            (float)altitude.estimatedAltitude / 100.0f,
-                           (float)altitude.variometer / 100.0f,
-                           (float)altitude.baroAltitude / 100.0f);
+                           (float)altitude.variometer / 100.0f);//,
+                           //(float)altitude.baroAltitude / 100.0f);
         } else {
             Serial.println("  Failed to get Altitude.");
         }
@@ -275,7 +326,7 @@ void loop() {
         // rc_data[4] = 2000; // High value
 
         // Send override for the first 8 channels (adjust count as needed)
-        uint8_t channels_to_send = 8;
+        uint8_t channels_to_send = 18;
         if (!msp.commandRawRC(rc_data, channels_to_send)) {
             // Serial.println("RC Override Send Failed"); // Avoid flooding serial
         }
@@ -285,5 +336,5 @@ void loop() {
     
 
     // Let the flight controller breathe between requests if loop runs very fast
-    delay(5000); // Optional small delay
+    delay(1000); // Optional small delay
 }
