@@ -4,6 +4,8 @@
 
 This library provides an interface for communicating with INAV flight controllers using the MultiWii Serial Protocol (MSP). It is designed for use with Arduino-compatible microcontrollers like the ESP32, enabling communication for telemetry display, configuration, mission management, and more.
 
+main.cpp provides the basic example of usage, will change significantly as the proper API between MSP communication and user script is figured out.
+
 This is an enhanced version based on the original MSP library by Fabrizio Di Vittorio. It is meant to use INAV source code directly for enums and defines.
 
 ## Features
@@ -26,9 +28,8 @@ This is an enhanced version based on the original MSP library by Fabrizio Di Vit
 
 *   **Hardware:** ESP32 recommended. Should work on other Arduino-compatible boards supporting the `Stream` class (e.g., ESP8266, SAMD, Teensy) but may require adjustments based on resources (RAM, Flash).
 *   **Firmware:** Designed for **INAV** flight controller firmware (recent versions supporting MSPv2). Compatibility with Betaflight, Cleanflight, or MultiWii may vary significantly, especially for INAV-specific messages.
-*   **Protocol:** Uses **MSP Version 2** (`$X` framing) for sending and receiving.
 
-## Project Structure (Recommended)
+## Project Structure
 
 This structure is compatible with both PlatformIO and the Arduino IDE library format.
 
