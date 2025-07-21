@@ -189,8 +189,8 @@ struct msp_wp_getinfo_t {
 struct msp_nav_waypoint_t {
   uint8_t  waypointIndex; // Index (0 to NAV_MAX_WAYPOINTS - 1)
   uint8_t  action;        // enum navWaypointAction_e
-  uint32_t latitude;      // deg * 1e7
-  uint32_t longitude;     // deg * 1e7
+  int32_t latitude;      // deg * 1e7
+  int32_t longitude;     // deg * 1e7
   uint32_t altitude;      // cm (ref depends on flag)
   uint16_t param1;        // Varies with action
   uint16_t param2;        // Varies with action

@@ -451,9 +451,7 @@ bool MSP::requestRcChannels(msp_rc_channels_t *reply, uint8_t expectedChannels) 
 
 bool MSP::commandRawRC(const uint16_t *channels, uint8_t channelCount) {
     if (!channels || channelCount == 0 || channelCount > MSP_MAX_RC_CHANNELS) return false;
-    // MSP_SET_RAW_RC typically doesn't expect an ACK in high-frequency use cases
-    // Set waitACK to false if needed. Check INAV source for actual behavior.
-    return command(MSP_SET_RAW_RC, channels, sizeof(uint16_t) * channelCount, false); // Send without waiting for ACK
+    return command(MSP_SET_RAW_RC, channels, sizeof(uint16_t) * channelCount, false);
 }
 
 bool MSP::requestMotorOutputs(msp_motor_outputs_t *reply) {
@@ -468,6 +466,7 @@ bool MSP::commandMotorOutputs(const uint16_t *motorValues) {
 }
 
 // --- Configuration ---
+// not sure about this at all
 bool MSP::requestNavPosholdConfig(msp_nav_poshold_config_t *reply) {
     return request(MSP_NAV_POSHOLD, reply, sizeof(*reply));
 }
