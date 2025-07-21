@@ -205,9 +205,8 @@ bool MSP::waitFor(uint16_t messageID, void *payload, uint16_t maxSize, uint16_t 
     while (millis() - t0 < _timeout) {
         if (recv(&recvMessageID, payload, maxSize, pRecvSize)) {
             if (messageID == recvMessageID) {
-                return true; // Found the message
+                return true; 
             }
-            // Received a different message, ignore and continue waiting
         }
          // Allow other tasks to run briefly
         // delay(1); // Consider adding a small delay if needed in cooperative multitasking
@@ -235,17 +234,15 @@ bool MSP::command(uint16_t messageID, const void *payload, uint16_t size, bool w
     send(messageID, payload, size);
 
     if (waitACK) {
-        // For ACK, we expect a reply with the same ID and 0 payload size
         uint16_t ackRecvSize = 0;
         if (waitFor(messageID, nullptr, 0, &ackRecvSize)) {
-             // Check if payload size is indeed 0 for a true ACK
              return (ackRecvSize == 0);
         } else {
-            return false; // Timeout waiting for ACK
+            return false; 
         }
     }
 
-    return true; // Command sent, no ACK requested
+    return true; 
 }
 
 
@@ -309,9 +306,7 @@ bool MSP::requestUID(msp_uid_t *reply) {
 }
 bool MSP::requestCraftName(msp_name_t *reply) {
     uint16_t recvSize;
-    // Request name, max buffer size MSP_MAX_NAME_LENGTH
     if (request(MSP_NAME, reply->craftName, MSP_MAX_NAME_LENGTH, &recvSize)) {
-        // Null terminate the received string within buffer bounds
         reply->craftName[min((uint16_t)MSP_MAX_NAME_LENGTH, recvSize)] = '\0';
         return true;
     }
@@ -382,18 +377,13 @@ bool MSP::setHeading(int16_t headingDeg) {
 
 // --- Waypoints & Missions ---
 bool MSP::requestWaypointInfo(msp_wp_getinfo_t *reply) {
-    // WP_GETINFO is MSPv1 Out only, no payload needed for request
     return request(MSP_WP_GETINFO, reply, sizeof(*reply));
 }
 bool MSP::requestWaypoint(uint8_t index, msp_nav_waypoint_t *reply) {
-    // Request is index, reply is full waypoint struct
     uint8_t payload = index;
-    // Note: MSP_WP uses same ID for request and reply
     if (waitFor(MSP_WP, reply, sizeof(*reply))) {
-        // Check if the returned index matches the requested one
         return (reply->waypointIndex == index);
     }
-    // Send request if waitFor failed (e.g., first request)
     send(MSP_WP, &payload, sizeof(payload));
     if (waitFor(MSP_WP, reply, sizeof(*reply))) {
          return (reply->waypointIndex == index);
@@ -429,7 +419,7 @@ bool MSP::requestBoxIDs(msp_boxids_t *reply, uint16_t *count) {
      if (!reply || !count) return false;
      uint16_t recvSize;
      if (request(MSP_BOXIDS, reply->ids, sizeof(reply->ids), &recvSize)) {
-         *count = recvSize; // Number of IDs received
+         *count = recvSize; 
          return true;
      }
      *count = 0;
@@ -440,9 +430,7 @@ bool MSP::requestModeRanges(msp_mode_ranges_t *reply, uint16_t *count) {
     if (!reply || !count) return false;
     uint16_t recvSize;
 
-    // The reply payload is a variable-length array of 4-byte structs.
     if (request(MSP_MODE_RANGES, reply->ranges, sizeof(reply->ranges), &recvSize)) {
-        // Each mode range struct is 4 bytes. Calculate how many we received.
         *count = recvSize / sizeof(msp_mode_range_t);
         return true;
     }
@@ -455,9 +443,7 @@ bool MSP::requestModeRanges(msp_mode_ranges_t *reply, uint16_t *count) {
 // --- RC & Motors ---
 bool MSP::requestRcChannels(msp_rc_channels_t *reply, uint8_t expectedChannels) {
     uint16_t recvSize;
-    // Request RC data
     if (request(MSP_RC, reply->channel, sizeof(uint16_t) * expectedChannels, &recvSize)) {
-        // Verify we received at least some channels (size = num_channels * 2)
         return (recvSize > 0 && (recvSize % 2 == 0));
     }
     return false;
@@ -467,7 +453,7 @@ bool MSP::commandRawRC(const uint16_t *channels, uint8_t channelCount) {
     if (!channels || channelCount == 0 || channelCount > MSP_MAX_RC_CHANNELS) return false;
     // MSP_SET_RAW_RC typically doesn't expect an ACK in high-frequency use cases
     // Set waitACK to false if needed. Check INAV source for actual behavior.
-    return command(200 /*MSP_SET_RAW_RC*/, channels, sizeof(uint16_t) * channelCount, false); // Send without waiting for ACK
+    return command(MSP_SET_RAW_RC, channels, sizeof(uint16_t) * channelCount, false); // Send without waiting for ACK
 }
 
 bool MSP::requestMotorOutputs(msp_motor_outputs_t *reply) {
@@ -476,10 +462,8 @@ bool MSP::requestMotorOutputs(msp_motor_outputs_t *reply) {
 
 bool MSP::commandMotorOutputs(const uint16_t *motorValues) {
      if (!motorValues) return false;
-     // Ensure we send exactly 8 motor values as expected by MSP_SET_MOTOR
      uint16_t payload[MSP_MAX_SUPPORTED_MOTORS];
-     memcpy(payload, motorValues, sizeof(payload)); // Assumes input has at least 8 values
-     // MSP_SET_MOTOR doesn't usually have an ACK
+     memcpy(payload, motorValues, sizeof(payload));
      return command(MSP_SET_MOTOR, payload, sizeof(payload), false);
 }
 
@@ -489,8 +473,7 @@ bool MSP::requestNavPosholdConfig(msp_nav_poshold_config_t *reply) {
 }
 bool MSP::setNavPosholdConfig(const msp_nav_poshold_config_t *config) {
     if (!config) return false;
-    // Size check: INAV expects exactly 13 bytes for V1 SET_NAV_POSHOLD
-    if (sizeof(*config) != 13) { /* Handle error or assert */ return false; }
+    if (sizeof(*config) != 13) { return false; }
     return command(MSP_SET_NAV_POSHOLD, config, sizeof(*config));
 }
 bool MSP::requestVoltageMeterConfig(msp_voltage_meter_config_t *reply){
@@ -499,7 +482,7 @@ bool MSP::requestVoltageMeterConfig(msp_voltage_meter_config_t *reply){
 bool MSP::setVoltageMeterConfig(const msp_voltage_meter_config_t *config){
     if (!config) return false;
     // Size check: INAV expects exactly 4 bytes for V1 SET_VOLTAGE_METER_CONFIG
-    if (sizeof(*config) != 4) { /* Handle error or assert */ return false; }
+    if (sizeof(*config) != 4) { return false; }
     return command(MSP_SET_VOLTAGE_METER_CONFIG, config, sizeof(*config));
 }
 bool MSP::requestBatteryConfig(msp2_inav_battery_config_t *reply){
@@ -507,8 +490,7 @@ bool MSP::requestBatteryConfig(msp2_inav_battery_config_t *reply){
 }
 bool MSP::setBatteryConfig(const msp2_inav_battery_config_t *config){
      if (!config) return false;
-     // Size check: INAV expects exactly 29 bytes for V2 SET_BATTERY_CONFIG
-    if (sizeof(*config) != 29) { /* Handle error or assert */ return false; }
+    if (sizeof(*config) != 29) { return false; }
     return command(MSP2_INAV_SET_BATTERY_CONFIG, config, sizeof(*config));
 }
 bool MSP::requestSensorConfig(msp_sensor_config_t *reply){
@@ -517,7 +499,7 @@ bool MSP::requestSensorConfig(msp_sensor_config_t *reply){
 bool MSP::setSensorConfig(const msp_sensor_config_t *config){
     if (!config) return false;
     // Size check: INAV expects exactly 6 bytes for SET_SENSOR_CONFIG
-    if (sizeof(*config) != 6) { /* Handle error or assert */ return false; }
+    if (sizeof(*config) != 6) { return false; }
     return command(MSP_SET_SENSOR_CONFIG, config, sizeof(*config));
 }
 
