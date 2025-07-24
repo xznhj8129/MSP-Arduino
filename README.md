@@ -8,6 +8,10 @@ main.cpp provides the basic example of usage, will change significantly as the p
 
 This is an enhanced version based on the original MSP library by Fabrizio Di Vittorio. It is meant to use INAV source code directly for enums and defines.
 
+## Important
+
+* **Unit Conversion:** While INAV and MSP sometime uses fractions of units such as deci-degrees, centimeters and cm/s; the API will perform the conversion to SI units like full degrees, meters and m/s.
+
 ## Features
 
 *   **Extensive Message Support:** Includes structures and functions for many common MSP messages, including:

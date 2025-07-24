@@ -19,12 +19,11 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#include <Arduino.h>
-#include "MSP.h"
+#include "msp_interface.h"
 
 // --- CRC8 DVB-S2 Calculation ---
 // (Copied from Betaflight/INAV source)
-uint8_t MSP::crc8_dvb_s2(uint8_t crc, unsigned char a)
+uint8_t MSPIntf::crc8_dvb_s2(uint8_t crc, unsigned char a)
 {
     crc ^= a;
     for (int ii = 0; ii < 8; ++ii) {
@@ -38,17 +37,17 @@ uint8_t MSP::crc8_dvb_s2(uint8_t crc, unsigned char a)
 }
 
 // --- Constructor ---
-MSP::MSP() {}
+MSPIntf::MSPIntf() {}
 
 // --- Basic Setup ---
-void MSP::begin(Stream &stream, uint32_t timeout)
+void MSPIntf::begin(Stream &stream, uint32_t timeout)
 {
     _stream = &stream;
     _timeout = timeout;
     _last_status_arming_flags = 0; // Reset cached armed status
 }
 
-void MSP::reset()
+void MSPIntf::reset()
 {
     if (!_stream) return;
     _stream->flush(); // Wait for outgoing data to be sent
@@ -62,7 +61,7 @@ void MSP::reset()
 // --- Low Level MSP Communication ---
 
 // Send MSP V2 frame ($X<)
-void MSP::send(uint16_t messageID, const void *payload, uint16_t size)
+void MSPIntf::send(uint16_t messageID, const void *payload, uint16_t size)
 {
     if (!_stream) return;
 
@@ -106,7 +105,7 @@ void MSP::send(uint16_t messageID, const void *payload, uint16_t size)
 }
 
 // Receive MSP V2 frame ($X>)
-bool MSP::recv(uint16_t *messageID, void *payload, uint16_t maxSize, uint16_t *recvSize)
+bool MSPIntf::recv(uint16_t *messageID, void *payload, uint16_t maxSize, uint16_t *recvSize)
 {
     if (!_stream) return false;
 
@@ -193,7 +192,7 @@ bool MSP::recv(uint16_t *messageID, void *payload, uint16_t maxSize, uint16_t *r
 
 
 // Wait for a specific message ID
-bool MSP::waitFor(uint16_t messageID, void *payload, uint16_t maxSize, uint16_t *recvSize)
+bool MSPIntf::waitFor(uint16_t messageID, void *payload, uint16_t maxSize, uint16_t *recvSize)
 {
     uint16_t recvMessageID;
     uint16_t currentRecvSize;
@@ -216,17 +215,17 @@ bool MSP::waitFor(uint16_t messageID, void *payload, uint16_t maxSize, uint16_t 
 }
 
 // Send a request and wait for the reply with the same message ID
-bool MSP::request(uint16_t messageID, void *payload, uint16_t maxSize, uint16_t *recvSize)
+bool MSPIntf::request(uint16_t messageID, void *payload, uint16_t maxSize, uint16_t *recvSize)
 {
     // Clear any stale data before sending
     //reset(); // Optional: Consider if clearing buffer before request is needed
 
-    send(messageID, nullptr, 0); // Requests typically have no payload
+    send(messageID, nullptr, 0);
     return waitFor(messageID, payload, maxSize, recvSize);
 }
 
 // Send a command, optionally wait for ACK (reply with same message ID, zero payload)
-bool MSP::command(uint16_t messageID, const void *payload, uint16_t size, bool waitACK)
+bool MSPIntf::command(uint16_t messageID, const void *payload, uint16_t size, bool waitACK)
 {
     // Clear any stale data before sending
     //reset(); // Optional: Consider if clearing buffer before command is needed
@@ -249,20 +248,20 @@ bool MSP::command(uint16_t messageID, const void *payload, uint16_t size, bool w
 // --- High Level Functions ---
 
 // --- Version & Board Info ---
-bool MSP::requestApiVersion(msp_api_version_t *reply) {
+bool MSPIntf::requestApiVersion(msp_api_version_t *reply) {
     return request(MSP_API_VERSION, reply, sizeof(*reply));
 }
-bool MSP::requestFcVariant(msp_fc_variant_t *reply) {
+bool MSPIntf::requestFcVariant(msp_fc_variant_t *reply) {
     return request(MSP_FC_VARIANT, reply, sizeof(*reply));
 }
-bool MSP::requestFcVersion(msp_fc_version_t *reply) {
+bool MSPIntf::requestFcVersion(msp_fc_version_t *reply) {
     return request(MSP_FC_VERSION, reply, sizeof(*reply));
 }
-bool MSP::requestBoardInfo(msp_board_info_t *reply, char *targetNameBuf, uint8_t targetNameBufLen) {
+bool MSPIntf::requestBoardInfo(msp_board_info_t *reply, char *targetNameBuf, uint8_t targetNameBufLen) {
      uint16_t recvSize;
      // Request fixed part first
-     if (request(MSP_BOARD_INFO, reply, MSP_BOARD_INFO_FIXED_SIZE, &recvSize)) {
-         if (recvSize >= MSP_BOARD_INFO_FIXED_SIZE && reply->targetNameLength > 0 && targetNameBuf && targetNameBufLen > 0) {
+     if (request(MSP_BOARD_INFO, reply, BOARD_INFO_FIXED_SIZE, &recvSize)) {
+         if (recvSize >= BOARD_INFO_FIXED_SIZE && reply->targetNameLength > 0 && targetNameBuf && targetNameBufLen > 0) {
              uint16_t nameBytesToRead = reply->targetNameLength;
              uint16_t bufferSpace = targetNameBufLen - 1; // Leave space for null terminator
              uint16_t bytesRead = 0;
@@ -290,7 +289,7 @@ bool MSP::requestBoardInfo(msp_board_info_t *reply, char *targetNameBuf, uint8_t
              } else {
                 return false; // Timeout reading name CRC
              }
-         } else if (recvSize >= MSP_BOARD_INFO_FIXED_SIZE) {
+         } else if (recvSize >= BOARD_INFO_FIXED_SIZE) {
              // No target name sent or no buffer provided, but fixed part OK
              if (targetNameBuf && targetNameBufLen > 0) targetNameBuf[0] = '\0';
              return true;
@@ -298,35 +297,35 @@ bool MSP::requestBoardInfo(msp_board_info_t *reply, char *targetNameBuf, uint8_t
      }
      return false; // Request failed
 }
-bool MSP::requestBuildInfo(msp_build_info_t *reply) {
+bool MSPIntf::requestBuildInfo(msp_build_info_t *reply) {
     return request(MSP_BUILD_INFO, reply, sizeof(*reply));
 }
-bool MSP::requestUID(msp_uid_t *reply) {
+bool MSPIntf::requestUID(msp_uid_t *reply) {
     return request(MSP_UID, reply, sizeof(*reply));
 }
-bool MSP::requestCraftName(msp_name_t *reply) {
+bool MSPIntf::requestCraftName(msp_name_t *reply) {
     uint16_t recvSize;
-    if (request(MSP_NAME, reply->craftName, MSP_MAX_NAME_LENGTH, &recvSize)) {
-        reply->craftName[min((uint16_t)MSP_MAX_NAME_LENGTH, recvSize)] = '\0';
+    if (request(MSP_NAME, reply->craftName, MAX_NAME_LENGTH, &recvSize)) {
+        reply->craftName[min((uint16_t)MAX_NAME_LENGTH, recvSize)] = '\0';
         return true;
     }
     return false;
 }
-bool MSP::setCraftName(const char *name) {
+bool MSPIntf::setCraftName(const char *name) {
     if (!name) return false;
     uint16_t len = strlen(name);
-    if (len > MSP_MAX_NAME_LENGTH) len = MSP_MAX_NAME_LENGTH;
+    if (len > MAX_NAME_LENGTH) len = MAX_NAME_LENGTH;
     return command(MSP_SET_NAME, name, len);
 }
 
 // --- Status ---
-bool MSP::requestStatus(msp_status_t *reply) {
+bool MSPIntf::requestStatus(msp_status_t *reply) {
     return request(MSP_STATUS, reply, sizeof(*reply));
 }
-bool MSP::requestStatusEx(msp_status_ex_t *reply) {
+bool MSPIntf::requestStatusEx(msp_status_ex_t *reply) {
     return request(MSP_STATUS_EX, reply, sizeof(*reply));
 }
-bool MSP::requestInavStatus(msp2_inav_status_t *reply) {
+bool MSPIntf::requestInavStatus(msp2_inav_status_t *reply) {
     bool success = request(MSP2_INAV_STATUS, reply, sizeof(*reply));
     if (success) {
         _last_status_arming_flags = reply->armingFlags; // Cache for isArmed()
@@ -335,39 +334,39 @@ bool MSP::requestInavStatus(msp2_inav_status_t *reply) {
 }
 
 // Check ARMFLAG_ARMED bit (bit 2) from last cached status
-bool MSP::isArmed() {
-    return (_last_status_arming_flags & (1UL << ARMFLAG_ARMED)) != 0;
+bool MSPIntf::isArmed() {
+    return (_last_status_arming_flags & (1UL << (1 << 2))) != 0;
 }
 
 
 // --- Sensor Data ---
-bool MSP::requestRawIMU(msp_raw_imu_t *reply) {
+bool MSPIntf::requestRawIMU(msp_raw_imu_t *reply) {
     return request(MSP_RAW_IMU, reply, sizeof(*reply));
 }
-bool MSP::requestAttitude(msp_attitude_t *reply) {
+bool MSPIntf::requestAttitude(msp_attitude_t *reply) {
     return request(MSP_ATTITUDE, reply, sizeof(*reply));
 }
-bool MSP::requestAltitude(msp_altitude_t *reply) {
+bool MSPIntf::requestAltitude(msp_altitude_t *reply) {
     return request(MSP_ALTITUDE, reply, sizeof(*reply));
 }
-bool MSP::requestSonarAltitude(msp_sonar_altitude_t *reply) {
+bool MSPIntf::requestSonarAltitude(msp_sonar_altitude_t *reply) {
     return request(MSP_SONAR_ALTITUDE, reply, sizeof(*reply));
 }
-bool MSP::requestAirspeed(msp2_inav_air_speed_t *reply) {
+bool MSPIntf::requestAirspeed(msp2_inav_air_speed_t *reply) {
     return request(MSP2_INAV_AIR_SPEED, reply, sizeof(*reply));
 }
 
 // --- GPS & Navigation ---
-bool MSP::requestRawGPS(msp_raw_gps_t *reply) {
+bool MSPIntf::requestRawGPS(msp_raw_gps_t *reply) {
     return request(MSP_RAW_GPS, reply, sizeof(*reply));
 }
-bool MSP::requestCompGPS(msp_comp_gps_t *reply) {
+bool MSPIntf::requestCompGPS(msp_comp_gps_t *reply) {
     return request(MSP_COMP_GPS, reply, sizeof(*reply));
 }
-bool MSP::requestNavStatus(msp_nav_status_t *reply) {
+bool MSPIntf::requestNavStatus(msp_nav_status_t *reply) {
     return request(MSP_NAV_STATUS, reply, sizeof(*reply));
 }
-bool MSP::setHeading(int16_t headingDeg) {
+bool MSPIntf::setHeading(int16_t headingDeg) {
     // Ensure heading is within 0-359 range if necessary, though FC might handle wrap-around.
     uint16_t heading = (uint16_t)constrain(headingDeg, 0, 359);
     msp_set_head_t payload;
@@ -376,10 +375,10 @@ bool MSP::setHeading(int16_t headingDeg) {
 }
 
 // --- Waypoints & Missions ---
-bool MSP::requestWaypointInfo(msp_wp_getinfo_t *reply) {
+bool MSPIntf::requestWaypointInfo(msp_wp_getinfo_t *reply) {
     return request(MSP_WP_GETINFO, reply, sizeof(*reply));
 }
-bool MSP::requestWaypoint(uint8_t index, msp_nav_waypoint_t *reply) {
+bool MSPIntf::requestWaypoint(uint8_t index, msp_nav_waypoint_t *reply) {
     uint8_t payload = index;
     if (waitFor(MSP_WP, reply, sizeof(*reply))) {
         return (reply->waypointIndex == index);
@@ -391,14 +390,14 @@ bool MSP::requestWaypoint(uint8_t index, msp_nav_waypoint_t *reply) {
     return false;
 }
 
-bool MSP::setWaypoint(const msp_nav_waypoint_t *wp) {
+bool MSPIntf::setWaypoint(const msp_nav_waypoint_t *wp) {
     if (!wp) return false;
     // Check if index is valid (optional, FC validates too)
     // if (wp->waypointIndex >= MSP_MAX_WAYPOINTS) return false; // Assuming MSP_MAX_WAYPOINTS is defined
     return command(MSP_SET_WP, wp, sizeof(*wp));
 }
 
-bool MSP::commandMissionLoad(uint8_t missionId) {
+bool MSPIntf::commandMissionLoad(uint8_t missionId) {
     msp_mission_id_t payload;
     payload.missionID = missionId;
     // This command might take time, ACK might not be immediate?
@@ -406,7 +405,7 @@ bool MSP::commandMissionLoad(uint8_t missionId) {
     return command(MSP_WP_MISSION_LOAD, &payload, sizeof(payload));
 }
 
-bool MSP::commandMissionSave(uint8_t missionId) {
+bool MSPIntf::commandMissionSave(uint8_t missionId) {
     msp_mission_id_t payload;
     payload.missionID = missionId;
      // This command might take time (EEPROM write). Increase timeout if needed?
@@ -415,7 +414,7 @@ bool MSP::commandMissionSave(uint8_t missionId) {
 
 
 // --- Modes ---
-bool MSP::requestBoxIDs(msp_boxids_t *reply, uint16_t *count) {
+bool MSPIntf::requestBoxIDs(msp_boxids_t *reply, uint16_t *count) {
      if (!reply || !count) return false;
      uint16_t recvSize;
      if (request(MSP_BOXIDS, reply->ids, sizeof(reply->ids), &recvSize)) {
@@ -426,7 +425,7 @@ bool MSP::requestBoxIDs(msp_boxids_t *reply, uint16_t *count) {
      return false;
 }
 
-bool MSP::requestModeRanges(msp_mode_ranges_t *reply, uint16_t *count) {
+bool MSPIntf::requestModeRanges(msp_mode_ranges_t *reply, uint16_t *count) {
     if (!reply || !count) return false;
     uint16_t recvSize;
 
@@ -441,7 +440,7 @@ bool MSP::requestModeRanges(msp_mode_ranges_t *reply, uint16_t *count) {
 
 
 // --- RC & Motors ---
-bool MSP::requestRcChannels(msp_rc_channels_t *reply, uint8_t expectedChannels) {
+bool MSPIntf::requestRcChannels(msp_rc_channels_t *reply, uint8_t expectedChannels) {
     uint16_t recvSize;
     if (request(MSP_RC, reply->channel, sizeof(uint16_t) * expectedChannels, &recvSize)) {
         return (recvSize > 0 && (recvSize % 2 == 0));
@@ -449,84 +448,86 @@ bool MSP::requestRcChannels(msp_rc_channels_t *reply, uint8_t expectedChannels) 
     return false;
 }
 
-bool MSP::commandRawRC(const uint16_t *channels, uint8_t channelCount) {
-    if (!channels || channelCount == 0 || channelCount > MSP_MAX_RC_CHANNELS) return false;
+bool MSPIntf::commandRawRC(const uint16_t *channels, uint8_t channelCount) {
+    if (!channels || channelCount == 0 || channelCount > MAX_RC_CHANNELS) return false;
     return command(MSP_SET_RAW_RC, channels, sizeof(uint16_t) * channelCount, false);
 }
 
-bool MSP::requestMotorOutputs(msp_motor_outputs_t *reply) {
+bool MSPIntf::requestMotorOutputs(msp_motor_outputs_t *reply) {
     return request(MSP_MOTOR, reply, sizeof(*reply));
 }
 
-bool MSP::commandMotorOutputs(const uint16_t *motorValues) {
+bool MSPIntf::commandMotorOutputs(const uint16_t *motorValues) {
      if (!motorValues) return false;
-     uint16_t payload[MSP_MAX_SUPPORTED_MOTORS];
+     uint16_t payload[MAX_SUPPORTED_MOTORS];
      memcpy(payload, motorValues, sizeof(payload));
      return command(MSP_SET_MOTOR, payload, sizeof(payload), false);
 }
 
+/*
 // --- Configuration ---
-// not sure about this at all
-bool MSP::requestNavPosholdConfig(msp_nav_poshold_config_t *reply) {
+// We are not doing configuration
+bool MSPIntf::requestNavPosholdConfig(msp_nav_poshold_config_t *reply) {
     return request(MSP_NAV_POSHOLD, reply, sizeof(*reply));
 }
-bool MSP::setNavPosholdConfig(const msp_nav_poshold_config_t *config) {
-    if (!config) return false;
-    if (sizeof(*config) != 13) { return false; }
-    return command(MSP_SET_NAV_POSHOLD, config, sizeof(*config));
-}
-bool MSP::requestVoltageMeterConfig(msp_voltage_meter_config_t *reply){
+bool MSPIntf::requestVoltageMeterConfig(msp_voltage_meter_config_t *reply){
     return request(MSP_VOLTAGE_METER_CONFIG, reply, sizeof(*reply));
 }
-bool MSP::setVoltageMeterConfig(const msp_voltage_meter_config_t *config){
+bool MSPIntf::requestBatteryConfig(msp2_inav_battery_config_t *reply){
+    return request(MSP2_INAV_BATTERY_CONFIG, reply, sizeof(*reply));
+}
+bool MSPIntf::requestSensorConfig(msp_sensor_config_t *reply){
+     return request(MSP_SENSOR_CONFIG, reply, sizeof(*reply));
+}
+bool MSPIntf::setVoltageMeterConfig(const msp_voltage_meter_config_t *config){
     if (!config) return false;
     // Size check: INAV expects exactly 4 bytes for V1 SET_VOLTAGE_METER_CONFIG
     if (sizeof(*config) != 4) { return false; }
     return command(MSP_SET_VOLTAGE_METER_CONFIG, config, sizeof(*config));
 }
-bool MSP::requestBatteryConfig(msp2_inav_battery_config_t *reply){
-    return request(MSP2_INAV_BATTERY_CONFIG, reply, sizeof(*reply));
+bool MSPIntf::setNavPosholdConfig(const msp_nav_poshold_config_t *config) {
+    if (!config) return false;
+    if (sizeof(*config) != 13) { return false; }
+    return command(MSP_SET_NAV_POSHOLD, config, sizeof(*config));
 }
-bool MSP::setBatteryConfig(const msp2_inav_battery_config_t *config){
+bool MSPIntf::setBatteryConfig(const msp2_inav_battery_config_t *config){
      if (!config) return false;
     if (sizeof(*config) != 29) { return false; }
     return command(MSP2_INAV_SET_BATTERY_CONFIG, config, sizeof(*config));
 }
-bool MSP::requestSensorConfig(msp_sensor_config_t *reply){
-     return request(MSP_SENSOR_CONFIG, reply, sizeof(*reply));
-}
-bool MSP::setSensorConfig(const msp_sensor_config_t *config){
+bool MSPIntf::setSensorConfig(const msp_sensor_config_t *config){
     if (!config) return false;
     // Size check: INAV expects exactly 6 bytes for SET_SENSOR_CONFIG
     if (sizeof(*config) != 6) { return false; }
     return command(MSP_SET_SENSOR_CONFIG, config, sizeof(*config));
 }
+*/
 
 
 // --- Battery & Power ---
-bool MSP::requestBatteryState(msp_battery_state_t *reply){
+bool MSPIntf::requestBatteryState(msp_battery_state_t *reply){
     return request(MSP_BATTERY_STATE, reply, sizeof(*reply));
 }
-bool MSP::requestAnalog(msp2_inav_analog_t *reply){
+bool MSPIntf::requestAnalog(msp2_inav_analog_t *reply){
     return request(MSP2_INAV_ANALOG, reply, sizeof(*reply));
 }
 
 
 // --- Calibration & System ---
-/*bool MSP::commandAccCalibration() {
+/*bool MSPIntf::commandAccCalibration() {
     // No payload, expect ACK
     return command(MSP_ACC_CALIBRATION, nullptr, 0);
 }
-bool MSP::commandMagCalibration() {
+bool MSPIntf::commandMagCalibration() {
     // No payload, expect ACK
     return command(MSP_MAG_CALIBRATION, nullptr, 0);
 }
-bool MSP::commandResetConfig() {
+bool MSPIntf::commandResetConfig() {
     // No payload, potentially long operation, ACK might be delayed or sent before reset?
     // Test required. Assuming standard ACK for now.
     return command(MSP_RESET_CONF, nullptr, 0);
 }
-bool MSP::commandEepromWrite() {
+bool MSPIntf::commandEepromWrite() {
     // No payload, potentially long operation (EEPROM write).
     return command(MSP_EEPROM_WRITE, nullptr, 0);
 } 
@@ -535,9 +536,9 @@ bool MSP::commandEepromWrite() {
 
 
 // --- Programming Framework ---
-bool MSP::requestGvarStatus(msp2_inav_gvar_status_t *reply){
+bool MSPIntf::requestGvarStatus(msp2_inav_gvar_status_t *reply){
     return request(MSP2_INAV_GVAR_STATUS, reply, sizeof(*reply));
 }
-bool MSP::requestLogicConditionsStatus(msp2_inav_logic_conditions_status_t *reply){
+bool MSPIntf::requestLogicConditionsStatus(msp2_inav_logic_conditions_status_t *reply){
     return request(MSP2_INAV_LOGIC_CONDITIONS_STATUS, reply, sizeof(*reply));
 }
